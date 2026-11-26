@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitor de Reservatório IoT</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+<style>
+:root{--bg:#e8f1f6;--fg:#0d2733;--card:#fff;--mut:#587383;--line:#d3e1e8;--water:#1788c2;--ok:#1b9a58;--bad:#d62839;--old:#b7861a;--soft:#f1f7fa;--sh:0 4px 18px #0b3a5314}
+:root[data-theme=dark]{--bg:#07131a;--fg:#e3f0f6;--card:#0f232d;--mut:#8aa6b3;--line:#1f3d4a;--old:#e2b94c;--soft:#0b1d26;--sh:0 4px 18px #0006}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:1120px;margin:0 auto;padding:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}
+h1{font-size:1.5rem;margin:0;letter-spacing:-.01em}h2{font-size:1rem;margin:0 0 10px}.sub,.mut{color:var(--mut)}.sub{font-size:.86rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-width:0;box-shadow:var(--sh)}
+.grid{display:grid;gap:14px;margin-bottom:14px}.top{grid-template-columns:1.7fr 1fr}.kpis{grid-template-columns:repeat(auto-fit,minmax(138px,1fr))}.two{grid-template-columns:1.7fr 1fr}
+@media(max-width:860px){.top,.two{grid-template-columns:1fr}}
+.hc{background:linear-gradient(140deg,#0a3550,#0e6a93 65%,#1fa3c9);color:#fff;display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:0}
+.hc .mut{color:#cfe6f1}.big{font-size:4.2rem;font-weight:800;line-height:1;letter-spacing:-.03em}.big small{font-size:1.3rem;font-weight:500;opacity:.75}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;color:#fff;font-weight:600;font-size:.85rem}
+.ok{background:var(--ok)}.bad{background:var(--bad)}.old{background:var(--old)}.gray{background:#7b8b94}.man{background:#7c4dff}
+.k{cursor:default;transition:transform .15s,border-color .15s}.k[data-k]{cursor:pointer}.k[data-k]:hover{transform:translateY(-2px);border-color:var(--water)}.k.sel{border-color:var(--water);box-shadow:0 0 0 2px var(--water)}
+.k b{display:block;font-size:1.45rem}.k span{color:var(--mut);font-size:.82rem}.k i{font-style:normal;font-size:.78rem;color:var(--mut)}
+button,input[type=number]{font:inherit;border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:10px;padding:5px 13px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--water)}button:disabled{opacity:.45;cursor:not-allowed}
+button.on{background:var(--water);color:#fff;border-color:var(--water)}button.go{background:var(--ok);color:#fff;border-color:var(--ok);animation:pu 1.2s infinite}
+@keyframes pu{50%{box-shadow:0 0 0 5px #1b9a5844}}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--water);height:26px}input[type=number]{width:72px;cursor:text}
+.chartwrap{position:relative}svg text{fill:var(--mut);font-size:11px}#tip{display:none;position:absolute;top:8px;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.85rem;box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}tbody tr{cursor:pointer}tbody tr:hover,tr.pn{background:var(--soft)}
+.ev{list-style:none;margin:0;padding:0}.ev li{display:flex;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:.88rem;cursor:pointer;border-radius:8px}.ev li:hover{background:var(--soft)}
+.ev .d{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px}.ev time{color:var(--mut);display:block;font-size:.78rem}
+.pipe{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.node{border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:7px 11px;font-size:.84rem;cursor:pointer}.node.sel{border-color:var(--water);box-shadow:0 0 0 2px var(--water)}
+.node b{display:flex;align-items:center;gap:6px}.node i{width:10px;height:10px;border-radius:50%;display:inline-block}.arr{color:var(--mut)}
+#tk{cursor:ns-resize;touch-action:none;flex:none}.wave{animation:wv 3s linear infinite}@keyframes wv{to{transform:translateX(-60px)}}#wg{transition:transform .9s ease}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:#0d2733;color:#fff;padding:10px 18px;border-radius:12px;opacity:0;transition:.3s;z-index:9;max-width:90vw}#toast.show{transform:translateX(-50%);opacity:1}
+</style></head><body><main>
+<header>
+  <div><h1>💧 Monitor de Reservatório IoT</h1><div class="sub">ESP32 + HC-SR04 (Wokwi) → HTTPS → API REST → Banco → Painel · <span id="dev">--</span></div></div>
+  <div class="bar" style="margin:0"><span id="gst" class="pill gray">Carregando…</span><span class="sub" id="cd"></span><button id="pz">Pausar</button><button id="th" title="Tema">☾</button></div>
+</header>
+
+<div class="grid top">
+  <div class="card hc">
+    <svg id="tk" viewBox="0 0 168 200" width="180" aria-label="Tanque: clique ou arraste para definir o nível">
+      <defs><linearGradient id="wgd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fdcff"/><stop offset="1" stop-color="#1788c2"/></linearGradient>
+      <clipPath id="tc"><rect x="13" y="13" width="94" height="174" rx="6"/></clipPath></defs>
+      <rect x="13" y="13" width="94" height="174" rx="6" fill="#ffffff18"/>
+      <g clip-path="url(#tc)"><g id="wg" style="transform:translateY(187px)"><rect x="0" y="4" width="260" height="220" fill="url(#wgd)" opacity=".92"/>
+        <path class="wave" d="M0 4Q15 -3 30 4T60 4T90 4T120 4T150 4T180 4T210 4T240 4T270 4V14H0Z" fill="#9be6ff" opacity=".8"/></g></g>
+      <rect x="10" y="10" width="100" height="180" rx="8" fill="none" stroke="#ffffffcc" stroke-width="3"/>
+      <line x1="10" x2="110" y1="152" y2="152" stroke="#ff7b86" stroke-dasharray="5 4" stroke-width="1.6"/><text x="116" y="150" style="fill:#ffb3ba;font-size:10px">alerta 20%</text>
+      <g id="tg" style="display:none"><line x1="6" x2="114" y1="0" y2="0" stroke="#ffe14d" stroke-width="2.4" stroke-dasharray="3 3"/><text id="tgt" x="116" y="-5" text-anchor="start" style="fill:#ffe14d;font-size:11px;font-weight:700"></text></g>
+    </svg>
+    <div style="flex:1;min-width:210px">
+      <div class="big"><span id="val">--</span> <small id="unit">%</small></div>
+      <p style="margin:10px 0 4px"><span id="st" class="pill gray">Aguardando dados…</span> <span id="src" class="pill man" style="display:none">MANUAL</span></p>
+      <div class="mut" id="when">Última atualização: --</div><div class="mut" id="dist"></div>
+      <div class="mut" id="trend" style="margin-top:8px"></div>
+      <div class="sub" style="color:#cfe6f1;margin-top:8px">👆 Clique ou arraste no tanque para definir um nível.</div>
+    </div>
+  </div>
+  <div class="card"><h2>Caminho do dado <span class="sub">(clique)</span></h2><div class="pipe" id="pipe"></div>
+    <p class="sub" id="nodeinfo" style="min-height:3.4em">Clique em uma etapa para ver o que ela faz.</p><p class="sub" id="rules" style="margin:0"></p></div>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+  <div class="bar"><h2 style="margin:0 8px 0 0">🎛 Controle remoto do nível</h2>
+    <button id="md-a">Automático (sensor)</button><button id="md-m">Manual</button></div>
+  <div class="bar"><input type="range" id="lv" min="0" max="100" step="1"><input type="number" id="lvn" min="0" max="100"><span class="sub">%</span>
+    <button id="ap">Aplicar no ESP32</button></div>
+  <div class="bar"><span class="sub">Atalhos:</span>
+    <button class="chip" data-v="100">Cheio</button><button class="chip" data-v="75">75%</button><button class="chip" data-v="50">50%</button><button class="chip" data-v="25">25%</button><button class="chip" data-v="15">Alerta</button><button class="chip" data-v="0">Vazio</button></div>
+  <div class="sub" id="ctlst"></div>
+</div>
+
+<div class="grid kpis" id="kpis"></div>
+
+<div class="card" id="chartcard" style="margin-bottom:14px">
+  <div class="bar"><h2 style="margin:0 8px 0 0">Histórico do nível</h2><span class="sub">mostrar:</span>
+    <button data-n="20">20</button><button data-n="50" class="on">50</button><button data-n="100">100</button><button data-n="500">500</button><span class="sub">leituras</span></div>
+  <div class="chartwrap"><svg id="chart" viewBox="0 0 820 270" width="100%"></svg><div id="tip"></div></div>
+  <div class="sub" id="pininfo">Clique em um ponto, uma linha da tabela ou um evento para destacar a leitura. Faixa amarela = sem transmissão.</div>
+</div>
+
+<div class="grid two" id="tbl">
+  <div class="card"><div class="bar"><h2 style="margin:0 8px 0 0">Leituras</h2>
+    <label class="sub"><input type="checkbox" id="oa"> só alertas</label><button id="csv" style="margin-left:auto">⬇ CSV</button></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Horário</th><th>Nível</th><th>Distância</th><th>Origem</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <div class="bar" style="margin:8px 0 0"><button id="pv">‹</button><button id="nx">›</button><span class="sub" id="pg"></span></div></div>
+  <div class="card"><h2>Eventos detectados <span class="sub">(clique)</span></h2><ul class="ev" id="ev"></ul></div>
+</div>
+<p class="sub">Dados simulados. O painel consulta a API a cada 5 s e calcula estatísticas, tendência e falhas de transmissão a partir do histórico.</p>
+</main><div id="toast"></div>
+<script>
+const API="https://zydaroazpzoxydkdsvbl.supabase.co/functions/v1/smooth-action";
+const STALE_MS=30000,ALERT=20,EXPECTED_MS=10000,REFRESH=5000;
+let H=[],last=null,limit=50,page=0,onlyAlert=false,lat=null,apiOk=true,paused=false,next=Date.now()+REFRESH,P=[];
+let ctl={ok:null,manual:false,level:50},draft={manual:false,level:50},dirty=false,hl=null,pin=null,sel=null,pinCode="";
+const NODES=[["Sensor + ESP32","O HC-SR04 mede a distância até a água. O ESP32 faz a média de 5 leituras, converte em % e envia a cada 10 s por HTTPS."],
+ ["API REST","Edge Function do Supabase: valida o token, calcula o alerta, grava no banco e serve /latest, /history e /command."],
+ ["Banco","Postgres do Supabase guarda todas as leituras, mesmo com o painel fechado."],
+ ["Painel","Este site: consulta a API a cada 5 s, calcula estatísticas, tendência e detecta falhas de transmissão."]];
+const $=id=>document.getElementById(id);
+const fmtT=d=>new Date(d).toLocaleTimeString("pt-BR"),fmtD=d=>new Date(d).toLocaleString("pt-BR"),avgf=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const dur=ms=>{const s=Math.round(ms/1000);return s<60?s+" s":s<3600?Math.floor(s/60)+" min "+s%60+" s":Math.floor(s/3600)+" h "+Math.floor(s%3600/60)+" min"};
+const age=()=>last?Date.now()-new Date(last.created_at).getTime():Infinity;
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("show"),3800)}
+function setTheme(t){document.documentElement.dataset.theme=t;$("th").textContent=t=="dark"?"☀":"☾";try{localStorage.setItem("th",t)}catch(e){}}
+setTheme((()=>{try{return localStorage.getItem("th")}catch(e){}})()||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+
+async function tick(){
+  next=Date.now()+REFRESH;
+  try{const t0=performance.now();
+    const [l,h,c]=await Promise.all([fetch(API+"/latest").then(r=>r.json()),fetch(API+"/history?limit="+limit).then(r=>r.json()),
+      fetch(API+"/command").then(r=>r.ok?r.json():null).catch(()=>null)]);
+    lat=Math.round(performance.now()-t0);apiOk=true;
+    if(!l.error)last=l;if(Array.isArray(h))H=h;
+    if(c&&!c.error&&"manual" in c){ctl={ok:true,manual:!!c.manual,level:+c.level};if(!dirty){draft.manual=ctl.manual;draft.level=ctl.level}}else ctl.ok=false;
+  }catch(e){apiOk=false}
+  renderAll();
+}
+function state(){
+  if(!apiOk)return["bad","API indisponível"];if(!last)return["gray","Aguardando dados…"];
+  if(age()>STALE_MS)return["old","DADOS DESATUALIZADOS"];return last.alert?["bad","ALERTA: nível baixo"]:["ok","Normal"];
+}
+function stats(){
+  if(!H.length)return null;
+  const v=H.map(r=>r.value),ts=H.map(r=>+new Date(r.created_at)),d=[];
+  for(let i=1;i<ts.length;i++)if(ts[i]-ts[i-1]<STALE_MS)d.push(ts[i]-ts[i-1]);
+  const w=H.slice(-12);let slope=0;
+  if(w.length>=3){const t0=+new Date(w[0].created_at),xs=w.map(r=>(+new Date(r.created_at)-t0)/60000),ys=w.map(r=>r.value),mx=avgf(xs),my=avgf(ys);let n=0,dn=0;xs.forEach((x,i)=>{n+=(x-mx)*(ys[i]-my);dn+=(x-mx)**2});slope=dn?n/dn:0}
+  return{min:Math.min(...v),max:Math.max(...v),avg:avgf(v),al:H.filter(r=>r.alert).length,iv:d.length?avgf(d):null,slope,n:H.length,span:ts[ts.length-1]-ts[0]};
+}
+function events(){
+  const E=[];
+  H.forEach((r,i)=>{const t=+new Date(r.created_at),p=H[i-1];
+    if(!p){E.push({t,k:"var(--water)",m:"Primeira leitura do período: "+r.value.toFixed(1)+"%"});return}
+    const pt=+new Date(p.created_at);
+    if(t-pt>STALE_MS){E.push({t:pt+1,k:"var(--old)",m:"Transmissão interrompida"});E.push({t,k:"var(--ok)",m:"Transmissão retomada após "+dur(t-pt)})}
+    if(r.alert&&!p.alert)E.push({t:t+2,k:"var(--bad)",m:"ALERTA: nível caiu para "+r.value.toFixed(1)+"%"});
+    if(!r.alert&&p.alert)E.push({t:t+2,k:"var(--ok)",m:"Nível normalizado ("+r.value.toFixed(1)+"%)"});
+    if(r.source!==p.source&&r.source)E.push({t:t+3,k:"#7c4dff",m:"Origem mudou para "+(r.source=="manual"?"controle manual":"sensor")});
+  });
+  if(last&&age()>STALE_MS)E.push({t:Date.now(),k:"var(--old)",m:"Sem novas leituras há "+dur(age())});
+  return E.sort((a,b)=>b.t-a.t).slice(0,9);
+}
+function tankY(v){return 187-Math.max(0,Math.min(100,v))*1.74}
+function renderHero(){
+  const [c,txt]=state();$("st").className="pill "+c;$("st").textContent=txt;$("gst").className="pill "+c;$("gst").textContent=txt;
+  // No modo manual, o número principal acompanha o comando confirmado pela API.
+  // No automático, continua mostrando exclusivamente a última leitura real do sensor.
+  const manualAtivo=ctl.ok===true&&ctl.manual;
+  if(!last&&!manualAtivo)return;
+  const valorExibido=manualAtivo?Number(ctl.level):Number(last.value);
+  $("dev").textContent=last?.device_id||"esp32-tanque-01";
+  $("val").textContent=Number.isFinite(valorExibido)?valorExibido.toFixed(1):"--";
+  $("unit").textContent=last?.unit||"%";
+  $("wg").style.transform="translateY("+tankY(valorExibido)+"px)";
+  $("src").style.display=manualAtivo?"inline-block":"none";
+  $("when").textContent=manualAtivo?"Nível definido pelo controle manual · aguardando confirmação do ESP32":last?("Última atualização: "+fmtD(last.created_at)+" (há "+dur(age())+")"+(age()>STALE_MS?" — último valor conhecido":"")):"Aguardando leitura do sensor…";
+  $("dist").textContent=last&&last.distance_cm!=null?"Distância medida: "+last.distance_cm.toFixed(1)+" cm":"";
+  const s=stats();let t="";
+  if(s&&!manualAtivo){const r=Math.abs(s.slope).toFixed(1);
+    if(s.slope<-0.5){const a=last.value>ALERT?(last.value-ALERT)/-s.slope:0;t="Tendência: esvaziando ("+r+" %/min). "+(a>0?"Alerta em ~"+dur(a*60000)+". ":"")+"Vazio em ~"+dur(last.value/-s.slope*60000)}
+    else if(s.slope>0.5)t="Tendência: enchendo ("+r+" %/min). Cheio em ~"+dur((100-last.value)/s.slope*60000);else t="Tendência: estável"}
+  else if(manualAtivo)t="Modo manual: nível solicitado de "+Math.round(valorExibido)+"%.";
+  $("trend").textContent=t;
+}
+function renderTarget(){
+  const show=draft.manual&&(dirty||ctl.manual);$("tg").style.display=show?"block":"none";
+  if(show){$("tg").setAttribute("transform","translate(0,"+tankY(draft.level)+")");$("tgt").textContent="alvo "+Math.round(draft.level)+"%";$("tgt").setAttribute("y",draft.level>=ALERT?-4:14)}
+}
+function renderCtl(){
+  $("md-a").classList.toggle("on",!draft.manual);$("md-m").classList.toggle("on",draft.manual);
+  $("lv").value=draft.level;$("lvn").value=Math.round(draft.level);
+  $("lv").disabled=$("lvn").disabled=!draft.manual;document.querySelectorAll(".chip").forEach(c=>c.disabled=!draft.manual);
+  $("ap").classList.toggle("go",dirty);
+  $("ctlst").textContent=ctl.ok===false?"⚠ Controle remoto indisponível: atualize a API e o código do ESP32 (veja o passo a passo).":ctl.ok?"ESP32 agora: "+(ctl.manual?"modo manual em "+Math.round(ctl.level)+"%":"automático (lendo o sensor)")+(dirty?" · alteração ainda não aplicada":""):"Verificando…";
+  renderTarget();
+}
+function renderKpis(){
+  const s=stats();if(!s){$("kpis").innerHTML="";return}
+  const K=[["min","Mínimo",s.min.toFixed(1)+" %","clique p/ marcar"],["max","Máximo",s.max.toFixed(1)+" %","clique p/ marcar"],["avg","Média",s.avg.toFixed(1)+" %","clique p/ marcar"],
+    ["al","Tempo em alerta",(s.al/s.n*100).toFixed(0)+" %",s.al+" de "+s.n+" · ver alertas"],[0,"Intervalo real",s.iv?(s.iv/1000).toFixed(1)+" s":"--","esperado: "+EXPECTED_MS/1000+" s"],
+    [0,"Janela analisada",dur(s.span),"1ª à última leitura"],[0,"Latência da API",lat!=null?lat+" ms":"--","ida e volta"]];
+  $("kpis").innerHTML=K.map(k=>`<div class="card k${hl===k[0]?" sel":""}" ${k[0]?`data-k="${k[0]}"`:""}><span>${k[1]}</span><b>${k[2]}</b><i>${k[3]}</i></div>`).join("");
+}
+function renderPipe(){
+  const f=last&&age()<=STALE_MS;
+  const S=[[f?"ok":last?"old":"gray",f?"enviando":"sem sinal"],[apiOk?"ok":"bad",apiOk?(lat??"-")+" ms":"fora do ar"],[H.length?"ok":"gray",H.length+" leituras"],["ok","ativo"]];
+  $("pipe").innerHTML=NODES.map((n,i)=>(i?'<span class="arr">→</span>':"")+`<div class="node${sel===i?" sel":""}" data-i="${i}"><b><i class="${S[i][0]}"></i>${n[0]}</b><span class="sub">${S[i][1]}</span></div>`).join("");
+  $("rules").textContent=`Coleta a cada ${EXPECTED_MS/1000} s · alerta abaixo de ${ALERT}% · desatualizado após ${STALE_MS/1000} s.`;
+}
+function renderChart(){
+  const W=820,Ht=270,L=38,R=10,T=10,B=26,svg=$("chart");
+  if(!H.length){svg.innerHTML='<text x="20" y="40">Aguardando leituras…</text>';return}
+  const ts=H.map(r=>+new Date(r.created_at)),t0=ts[0];let t1=ts[ts.length-1];if(t1===t0)t1=t0+1000;
+  const X=t=>L+(t-t0)/(t1-t0)*(W-L-R),Y=v=>T+(100-v)/100*(Ht-T-B);let s="";
+  for(let g=0;g<=100;g+=20)s+=`<line x1="${L}" x2="${W-R}" y1="${Y(g)}" y2="${Y(g)}" stroke="var(--line)"/><text x="${L-6}" y="${Y(g)+4}" text-anchor="end">${g}</text>`;
+  s+=`<line x1="${L}" x2="${W-R}" y1="${Y(ALERT)}" y2="${Y(ALERT)}" stroke="var(--bad)" stroke-dasharray="6 4"/>`;
+  for(let i=0;i<=4;i++){const t=t0+(t1-t0)*i/4;s+=`<text x="${X(t)}" y="${Ht-6}" text-anchor="${i==4?"end":i==0?"start":"middle"}">${fmtT(t)}</text>`}
+  P=H.map((r,i)=>({x:X(ts[i]),y:Y(r.value),r}));
+  const segs=[];let seg=[P[0]];
+  for(let i=1;i<P.length;i++){if(ts[i]-ts[i-1]>STALE_MS){segs.push(seg);seg=[];s+=`<rect x="${P[i-1].x}" y="${T}" width="${P[i].x-P[i-1].x}" height="${Ht-T-B}" fill="var(--old)" opacity=".18"/>`}seg.push(P[i])}
+  segs.push(seg);
+  segs.forEach(g=>{if(g.length>1){const pts=g.map(p=>p.x+","+p.y).join(" ");
+    s+=`<polygon points="${g[0].x},${Y(0)} ${pts} ${g[g.length-1].x},${Y(0)}" fill="var(--water)" opacity=".15"/><polyline points="${pts}" fill="none" stroke="var(--water)" stroke-width="2.4" stroke-linejoin="round"/>`}});
+  const st=stats();if(hl&&st&&st[hl]!=null&&hl!="al"){const n={min:"mín",max:"máx",avg:"média"}[hl];s+=`<line x1="${L}" x2="${W-R}" y1="${Y(st[hl])}" y2="${Y(st[hl])}" stroke="#7c4dff" stroke-width="1.8" stroke-dasharray="2 4"/><text x="${W-R-4}" y="${Y(st[hl])-5}" text-anchor="end" style="fill:#7c4dff;font-weight:700">${n} ${st[hl].toFixed(1)}%</text>`}
+  if(P.length<=120)P.forEach(p=>s+=`<circle cx="${p.x}" cy="${p.y}" r="${p.r.alert?4:2.5}" fill="${p.r.alert?"var(--bad)":"var(--water)"}"/>`);
+  const pp=P.find(p=>p.r.created_at===pin);if(pp)s+=`<circle cx="${pp.x}" cy="${pp.y}" r="8" fill="none" stroke="#7c4dff" stroke-width="3"/>`;
+  s+=`<line id="cur" y1="${T}" y2="${Ht-B}" stroke="var(--mut)" opacity="0"/><rect id="ov" x="${L}" y="${T}" width="${W-L-R}" height="${Ht-T-B}" fill="transparent" style="cursor:pointer"/>`;
+  svg.innerHTML=s;
+  const near=e=>{const b=svg.getBoundingClientRect(),mx=(e.clientX-b.left)*W/b.width;let best=P[0];P.forEach(p=>{if(Math.abs(p.x-mx)<Math.abs(best.x-mx))best=p});return[best,b]};
+  $("ov").onmousemove=e=>{const[best,b]=near(e),c=$("cur"),tip=$("tip");c.setAttribute("x1",best.x);c.setAttribute("x2",best.x);c.setAttribute("opacity",1);
+    tip.style.display="block";tip.style.left=Math.max(0,Math.min(best.x/W*b.width,b.width-170))+"px";
+    tip.innerHTML=`<b>${best.r.value.toFixed(1)} %</b> ${best.r.alert?"(alerta)":""}<br>${fmtD(best.r.created_at)}<br>${best.r.distance_cm??"-"} cm`};
+  $("ov").onmouseleave=()=>{$("tip").style.display="none";$("cur").setAttribute("opacity",0)};
+  $("ov").onclick=e=>setPin(near(e)[0].r.created_at);
+  const r=H.find(x=>x.created_at===pin);
+  $("pininfo").innerHTML=r?`<b>Leitura selecionada:</b> ${r.value.toFixed(1)} ${r.unit} · ${fmtD(r.created_at)} · ${r.distance_cm??"-"} cm · origem ${r.source||"sensor"} · ${r.alert?"ALERTA":"normal"} <button onclick="setPin(null)">limpar</button>`:"Clique em um ponto, uma linha da tabela ou um evento para destacar a leitura. Faixa amarela = sem transmissão.";
+}
+function setPin(v){pin=v;renderChart();renderTable()}
+function renderEvents(){
+  const E=events();$("ev").innerHTML=E.length?E.map(e=>`<li data-t="${e.t}"><span class="d" style="background:${e.k}"></span><div>${e.m}<time>${fmtD(e.t)}</time></div></li>`).join(""):'<li class="mut">Nenhum evento ainda.</li>';
+}
+function renderTable(){
+  let rows=H.slice().reverse();if(onlyAlert)rows=rows.filter(r=>r.alert);
+  const pages=Math.max(1,Math.ceil(rows.length/10));page=Math.min(page,pages-1);
+  $("rows").innerHTML=rows.slice(page*10,page*10+10).map(r=>`<tr data-c="${r.created_at}" class="${r.created_at===pin?"pn":""}"><td>${fmtD(r.created_at)}</td><td>${r.value.toFixed(1)} ${r.unit}</td><td>${r.distance_cm??"-"} cm</td><td>${r.source=="manual"?'<span class="pill man">manual</span>':"sensor"}</td><td><span class="pill ${r.alert?"bad":"ok"}">${r.alert?"Alerta":"Normal"}</span></td></tr>`).join("")||'<tr><td colspan="5">Sem leituras</td></tr>';
+  $("pg").textContent="Página "+(page+1)+" de "+pages+" · "+rows.length+" leituras";
+}
+function renderAll(){renderHero();renderKpis();renderPipe();renderChart();renderEvents();renderTable();renderCtl()}
+
+function edit(level,manual){draft.manual=manual??true;if(level!=null)draft.level=Math.max(0,Math.min(100,Math.round(level)));dirty=true;renderCtl()}
+async function apply(retry){
+  if(ctl.ok===false)return toast("Atualize a API e o código do ESP32 primeiro (veja o passo a passo).");
+  try{const r=await fetch(API+"/command",{method:"POST",headers:{"Content-Type":"application/json","x-panel-pin":pinCode},body:JSON.stringify({manual:draft.manual,level:draft.level})});
+    if(r.status===401&&!retry){pinCode=prompt("PIN do painel:")||"";return apply(true)}
+    if(!r.ok)throw 0;
+    // Atualiza imediatamente o número principal com o comando aceito.
+    ctl={ok:true,manual:!!draft.manual,level:Number(draft.level)};
+    dirty=false;renderAll();toast(draft.manual?"Comando enviado! O número principal foi atualizado; o ESP32 aplica na próxima coleta.":"Voltando ao sensor automático (até 10 s).");tick()}
+  catch(e){toast("Não consegui enviar o comando.")}
+}
+const tk=$("tk"),tankSet=e=>{const b=tk.getBoundingClientRect(),y=(e.clientY-b.top)*200/b.height;edit((187-y)/1.74,true)};
+tk.onpointerdown=e=>{tk.setPointerCapture(e.pointerId);tankSet(e);tk.onpointermove=tankSet};tk.onpointerup=()=>tk.onpointermove=null;
+$("md-a").onclick=()=>edit(null,false);$("md-m").onclick=()=>edit(null,true);
+$("lv").oninput=e=>edit(+e.target.value,true);$("lvn").oninput=e=>edit(+e.target.value||0,true);$("ap").onclick=()=>apply();
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>edit(+c.dataset.v,true));
+$("kpis").onclick=e=>{const c=e.target.closest("[data-k]");if(!c)return;const k=c.dataset.k;
+  if(k=="al"){onlyAlert=!onlyAlert;$("oa").checked=onlyAlert;page=0;renderTable();$("tbl").scrollIntoView({behavior:"smooth"});return}
+  hl=hl===k?null:k;renderKpis();renderChart()};
+$("pipe").onclick=e=>{const n=e.target.closest("[data-i]");if(!n)return;sel=+n.dataset.i;$("nodeinfo").textContent=NODES[sel][1];renderPipe()};
+$("ev").onclick=e=>{const li=e.target.closest("[data-t]");if(!li||!H.length)return;const t=+li.dataset.t;
+  let b=H[0];H.forEach(r=>{if(Math.abs(+new Date(r.created_at)-t)<Math.abs(+new Date(b.created_at)-t))b=r});setPin(b.created_at);$("chartcard").scrollIntoView({behavior:"smooth"})};
+$("rows").onclick=e=>{const tr=e.target.closest("[data-c]");if(tr){setPin(tr.dataset.c);$("chartcard").scrollIntoView({behavior:"smooth"})}};
+document.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{limit=+b.dataset.n;page=0;document.querySelectorAll("[data-n]").forEach(x=>x.classList.toggle("on",x===b));tick()});
+$("oa").onchange=e=>{onlyAlert=e.target.checked;page=0;renderTable()};$("pv").onclick=()=>{page=Math.max(0,page-1);renderTable()};$("nx").onclick=()=>{page++;renderTable()};
+$("pz").onclick=()=>{paused=!paused;$("pz").textContent=paused?"Retomar":"Pausar";$("pz").classList.toggle("on",paused)};
+$("th").onclick=()=>setTheme(document.documentElement.dataset.theme=="dark"?"light":"dark");
+$("csv").onclick=()=>{const l=["id,device_id,quantity,value,unit,distance_cm,alert,source,created_at",...H.map(r=>[r.id,r.device_id,r.quantity,r.value,r.unit,r.distance_cm,r.alert,r.source||"sensor",r.created_at].join(","))];
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([l.join("\n")],{type:"text/csv"}));a.download="leituras.csv";a.click()};
+setInterval(()=>{if(paused){$("cd").textContent="atualização pausada";return}
+  $("cd").textContent="próxima em "+Math.max(0,Math.round((next-Date.now())/1000))+" s";if(Date.now()>=next)tick();else{renderHero();renderPipe()}},1000);
+tick();
+</script></body></html>
